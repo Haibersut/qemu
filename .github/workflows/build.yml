@@ -1,0 +1,116 @@
+# QEMU 多架构 RPM 构建工作流
+# 使用 Docker buildx 构建 amd64 和 aarch64 架构的 QEMU RPM 包
+
+name: Build QEMU RPM Packages
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      qemu_version:
+        description: 'QEMU version to build'
+        required: false
+        default: '9.0.1'
+      distros:
+        description: 'Distributions to build (comma-separated, e.g., openeuler-22.03,openeuler-24.03)'
+        required: false
+        default: 'openeuler-22.03,openeuler-24.03'
+
+env:
+  QEMU_VERSION: ${{ github.event.inputs.qemu_version || '9.0.1' }}
+
+jobs:
+  # 生成构建矩阵
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          chmod +x .github/scripts/generate-matrix.sh
+          .github/scripts/generate-matrix.sh "${{ github.event.inputs.distros || 'openeuler-22.03,openeuler-24.03' }}"
+
+  # 构建 RPM 包
+  build:
+    needs: matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for multi-arch
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+
+      - name: Prepare build environment
+        run: |
+          chmod +x .github/scripts/*.sh
+          chmod +x scripts/*.sh
+          .github/scripts/prepare-build.sh "${{ matrix.distro }}" "${{ matrix.distro_version }}"
+
+      - name: Build RPM package
+        id: build
+        run: |
+          .github/scripts/build-package.sh \
+            --qemu-version "${{ env.QEMU_VERSION }}" \
+            --distro "${{ matrix.distro }}" \
+            --distro-version "${{ matrix.distro_version }}" \
+            --arch "${{ matrix.arch }}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-${{ env.QEMU_VERSION }}-${{ matrix.distro }}-${{ matrix.distro_version }}-${{ matrix.arch }}
+          path: output/**/*.rpm
+          retention-days: 30
+          if-no-files-found: error
+
+  # 创建 Release（仅在 tag 推送时）
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          chmod +x .github/scripts/prepare-release.sh
+          .github/scripts/prepare-release.sh
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
