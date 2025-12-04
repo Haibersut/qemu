@@ -19,9 +19,15 @@ on:
         description: 'Distributions to build (comma-separated, e.g., openeuler-22.03,openeuler-24.03)'
         required: false
         default: 'openeuler-22.03,openeuler-24.03'
+      create_release:
+        description: 'Create a GitHub Release after successful build'
+        type: boolean
+        required: false
+        default: true
 
 env:
   QEMU_VERSION: ${{ github.event.inputs.qemu_version || '9.0.1' }}
+  BUILD_TIMESTAMP: ${{ github.run_id }}
 
 jobs:
   # 生成构建矩阵
@@ -29,9 +35,17 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      build_date: ${{ steps.set-date.outputs.build_date }}
+      build_time: ${{ steps.set-date.outputs.build_time }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set build date and time
+        id: set-date
+        run: |
+          echo "build_date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+          echo "build_time=$(date +'%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Generate build matrix
         id: set-matrix
@@ -67,21 +81,32 @@ jobs:
             --qemu-version "${{ env.QEMU_VERSION }}" \
             --distro "${{ matrix.distro }}" \
             --distro-version "${{ matrix.distro_version }}" \
-            --arch "${{ matrix.arch }}"
+            --arch "${{ matrix.arch }}" \
+            --build-date "${{ needs.matrix.outputs.build_date }}" \
+            --build-time "${{ needs.matrix.outputs.build_time }}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: qemu-${{ env.QEMU_VERSION }}-${{ matrix.distro }}-${{ matrix.distro_version }}-${{ matrix.arch }}
+          name: qemu-${{ env.QEMU_VERSION }}-${{ matrix.distro }}-${{ matrix.distro_version }}-${{ matrix.arch }}-${{ needs.matrix.outputs.build_date }}
           path: output/**/*.rpm
           retention-days: 30
           if-no-files-found: error
 
-  # 创建 Release（仅在 tag 推送时）
+  # 创建 Release（构建成功后自动发布）
   release:
-    needs: build
+    needs: [matrix, build]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    # 在以下情况下创建 Release：
+    # 1. 推送 tag 时
+    # 2. 手动触发且选择创建 release
+    # 3. 推送到 main/master 分支时
+    if: |
+      always() && 
+      needs.build.result == 'success' && 
+      (startsWith(github.ref, 'refs/tags/') || 
+       (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true') ||
+       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')))
     
     steps:
       - name: Checkout repository
@@ -97,12 +122,42 @@ jobs:
           chmod +x .github/scripts/prepare-release.sh
           .github/scripts/prepare-release.sh
 
+      - name: Generate release tag and name
+        id: release-info
+        run: |
+          BUILD_DATE="${{ needs.matrix.outputs.build_date }}"
+          BUILD_TIME="${{ needs.matrix.outputs.build_time }}"
+          QEMU_VER="${{ env.QEMU_VERSION }}"
+          
+          # 生成 release tag 和名称
+          RELEASE_TAG="v${QEMU_VER}-${BUILD_DATE}-${BUILD_TIME}"
+          RELEASE_NAME="QEMU ${QEMU_VER} - ${BUILD_DATE}-${BUILD_TIME}"
+          
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+          echo "Release Tag: ${RELEASE_TAG}"
+          echo "Release Name: ${RELEASE_NAME}"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.release-info.outputs.release_tag }}
+          name: ${{ steps.release-info.outputs.release_name }}
           files: release/*
           generate_release_notes: true
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/') }}
+          body: |
+            ## QEMU ${{ env.QEMU_VERSION }} 构建
+            
+            **构建时间**: ${{ needs.matrix.outputs.build_date }}-${{ needs.matrix.outputs.build_time }}
+            **QEMU 版本**: ${{ env.QEMU_VERSION }}
+            
+            ### 包含的软件包
+            - openEuler 22.03 (x86_64, aarch64)
+            - openEuler 24.03 (x86_64, aarch64)
+            
+            ### 下载说明
+            请根据您的系统架构和发行版选择对应的 RPM 包。
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
