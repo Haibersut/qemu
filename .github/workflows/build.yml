@@ -1,5 +1,5 @@
 # QEMU 多架构 RPM 构建工作流
-# 使用 Docker buildx 构建 amd64 和 aarch64 架构的 QEMU RPM 包
+# 使用原生 runner 构建 amd64 和 aarch64 架构的 QEMU RPM 包
 
 name: Build QEMU RPM Packages
 
@@ -42,7 +42,7 @@ jobs:
   # 构建 RPM 包
   build:
     needs: matrix
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.matrix.outputs.matrix) }}
@@ -51,22 +51,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU for multi-arch
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/amd64,linux/arm64
-
-      - name: Re-register QEMU binfmt with fix-binary flag
-        run: |
-          docker run --rm --privileged tonistiigi/binfmt:latest --uninstall 'qemu-*'
-          docker run --rm --privileged tonistiigi/binfmt:latest --install all
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:latest
-            network=host
 
       - name: Prepare build environment
         run: |

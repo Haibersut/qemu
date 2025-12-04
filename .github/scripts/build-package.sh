@@ -95,15 +95,6 @@ echo "Output Directory: ${OUTPUT_DIR}"
 # 构建 Docker 镜像
 echo ""
 echo "Building Docker image..."
-
-if [ "${PLATFORM}" != "linux/amd64" ]; then
-    echo "Cross-architecture build detected, verifying QEMU setup..."
-    if [ -f /proc/sys/fs/binfmt_misc/qemu-aarch64 ]; then
-        echo "QEMU aarch64 handler registered:"
-        cat /proc/sys/fs/binfmt_misc/qemu-aarch64 || true
-    fi
-fi
-
 docker buildx build \
     --platform "${PLATFORM}" \
     --build-arg BASE_IMAGE="${BASE_IMAGE}" \
