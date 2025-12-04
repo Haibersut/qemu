@@ -74,7 +74,7 @@ QEMU_RECOMMENDED_DEPS=(
     pcre2-devel
 )
 
-# QEMU 可选依赖 (图形/USB等)
+# QEMU 可选依赖
 QEMU_OPTIONAL_DEPS=(
     SDL2-devel
     gtk3-devel
@@ -87,10 +87,11 @@ QEMU_OPTIONAL_DEPS=(
     libiscsi-devel
     libnfs-devel
     bluez-libs-devel
+    librbd-devel
+    librados-devel
 )
 
-# 可能不存在的依赖（尝试安装）
-# openEuler 24.03 有更多的包可用
+# 可能不存在的依赖
 QEMU_OPTIONAL_TRY_DEPS=(
     libslirp-devel
     python3-sphinx

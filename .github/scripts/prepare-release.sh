@@ -64,7 +64,7 @@ if [ -d "artifacts" ]; then
             echo ""
             echo "## Package List"
             echo ""
-            for f in *.rpm *.deb 2>/dev/null; do
+            for f in *.rpm *.deb; do
                 if [ -f "$f" ]; then
                     size=$(ls -lh "$f" | awk '{print $5}')
                     echo "- $f ($size)"

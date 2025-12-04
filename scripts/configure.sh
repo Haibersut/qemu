@@ -55,26 +55,10 @@ RUN "${SRC_DIR}/${QEMU_SRC_BASENAME}/configure" \
     --enable-system \
     --enable-tools \
     --enable-guest-agent \
+    --enable-rbd \
+    --enable-spice \
     --disable-debug-info \
     --disable-werror \
-    ${DISTRO_OPTS} \
-    || {
-        WARN "Full configuration failed, trying minimal configuration..."
-        RUN "${SRC_DIR}/${QEMU_SRC_BASENAME}/configure" \
-            --prefix="/usr" \
-            --sysconfdir="/etc" \
-            --localstatedir="/var" \
-            --libdir="/usr/lib64" \
-            --datadir="/usr/share" \
-            --target-list="${TARGETS}" \
-            --enable-kvm \
-            --enable-pie \
-            --enable-vnc \
-            --enable-linux-user \
-            --enable-system \
-            --enable-tools \
-            --disable-debug-info \
-            --disable-werror
-    }
+    ${DISTRO_OPTS}
 
 INFO "Configure completed successfully"

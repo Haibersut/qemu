@@ -61,6 +61,10 @@ BuildRequires:  json-c-devel
 BuildRequires:  libselinux-devel
 BuildRequires:  pcre-devel
 BuildRequires:  pcre2-devel
+BuildRequires:  spice-server-devel
+BuildRequires:  spice-protocol
+BuildRequires:  librbd-devel
+BuildRequires:  librados-devel
 
 %description
 QEMU is a generic and open source machine & userspace emulator and virtualizer.
@@ -75,7 +79,6 @@ This package provides QEMU with support for:
 %setup -q -n qemu-%{version}
 
 %build
-# 根据构建主机确定目标架构
 %ifarch x86_64
 TARGETS="x86_64-softmmu,aarch64-softmmu,x86_64-linux-user,aarch64-linux-user"
 %endif
@@ -117,29 +120,10 @@ fi
     --enable-system \
     --enable-tools \
     --enable-guest-agent \
+    --enable-rbd \
+    --enable-spice \
     --disable-debug-info \
-    --disable-werror \
-    || {
-        # 如果完整配置失败，尝试最小配置
-        echo "Full configuration failed, trying minimal configuration..."
-        ../configure \
-            --prefix=%{_prefix} \
-            --sysconfdir=%{_sysconfdir} \
-            --localstatedir=%{_localstatedir} \
-            --libdir=%{_libdir} \
-            --datadir=%{_datadir} \
-            --docdir=%{_docdir}/qemu-%{version} \
-            --target-list=${TARGETS} \
-            --enable-kvm \
-            ${SLIRP_OPT} \
-            --enable-pie \
-            --enable-vnc \
-            --enable-linux-user \
-            --enable-system \
-            --enable-tools \
-            --disable-debug-info \
-            --disable-werror
-    }
+    --disable-werror
 
 %make_build
 
@@ -190,7 +174,6 @@ EOF
 %{_docdir}/qemu-%{version}/
 
 %post
-# 添加 kvm 组（如果不存在）
 getent group kvm >/dev/null || groupadd -r kvm || :
 
 # 设置 bridge helper 权限
@@ -204,6 +187,6 @@ udevadm control --reload-rules 2>/dev/null || :
 udevadm trigger 2>/dev/null || :
 
 %changelog
-* %(date "+%a %b %d %Y") QEMU Builder <builder@localhost> - %{version}-%{release}
+* %(date "+%a %b %d %Y") QEMU Builder <builder@haibersut> - %{version}-%{release}
 - Build for openEuler
 - Multi-architecture support (x86_64, aarch64)
