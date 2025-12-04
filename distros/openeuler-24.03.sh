@@ -9,6 +9,8 @@ DOCKER_IMAGE="openeuler/openeuler:24.03-lts"
 PKG_MANAGER="dnf"
 
 # 基础构建依赖
+# 注意：openEuler 24.03 中 python3-ninja 取代了 ninja-build
+# 必须先安装 python3-ninja，然后再安装 meson
 BASE_BUILD_DEPS=(
     rpm-build
     rpmdevtools
@@ -19,15 +21,19 @@ BASE_BUILD_DEPS=(
     make
     gcc
     gcc-c++
-    ninja-build
     python3
     python3-pip
-    meson
+    python3-ninja
     flex
     bison
     diffutils
     findutils
     gettext
+)
+
+# meson 需要单独安装（在 python3-ninja 之后）
+MESON_DEPS=(
+    meson
 )
 
 # QEMU 核心依赖
@@ -98,6 +104,9 @@ install_dependencies() {
     
     INFO "Installing base build dependencies..."
     ${pkg_mgr} install -y "${BASE_BUILD_DEPS[@]}"
+    
+    INFO "Installing meson (after python3-ninja)..."
+    ${pkg_mgr} install -y "${MESON_DEPS[@]}"
     
     INFO "Installing QEMU core dependencies..."
     ${pkg_mgr} install -y "${QEMU_CORE_DEPS[@]}"

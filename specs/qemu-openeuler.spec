@@ -176,7 +176,12 @@ EOF
 %{_bindir}/qemu*
 %{_bindir}/elf2dmp
 %{_libexecdir}/qemu-bridge-helper
+%{_libexecdir}/virtfs-proxy-helper
 %{_datadir}/qemu/
+%{_datadir}/applications/qemu.desktop
+%{_datadir}/icons/hicolor/*/apps/qemu.*
+%{_datadir}/locale/*/LC_MESSAGES/qemu.mo
+%{_includedir}/qemu-plugin.h
 %config(noreplace) %{_sysconfdir}/qemu/
 %{_prefix}/lib/udev/rules.d/99-qemu-kvm.rules
 %{_mandir}/man1/*
