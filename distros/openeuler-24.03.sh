@@ -1,9 +1,8 @@
 #!/bin/bash
-# openEuler 24.03 LTS 发行版配置
+# openEuler 24.03 LTS SP2 发行版配置
 # 此文件定义 openEuler 24.03 特有的配置
 
-# Docker 镜像
-DOCKER_IMAGE="openeuler/openeuler:24.03-lts"
+DOCKER_IMAGE="openeuler/openeuler:24.03-lts-sp2"
 
 # 包管理器
 PKG_MANAGER="dnf"
