@@ -1,0 +1,168 @@
+# QEMU 构建后测试工作流
+# 在 openEuler 22.03/24.03 的 x86_64 和 aarch64 架构上运行测试
+#
+# 触发方式:
+#   1. workflow_call - 由其他工作流（如 build.yml）调用
+#   2. workflow_dispatch - 手动触发
+#
+# 注意: 此工作流独立于 build 工作流，不会在 push/PR 时自动运行
+
+name: Test QEMU Build
+
+on:
+  # 供其他工作流调用
+  workflow_call:
+    inputs:
+      qemu_version:
+        description: 'QEMU version to test'
+        required: true
+        type: string
+      build_date:
+        description: 'Build date for artifact naming'
+        required: true
+        type: string
+
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      qemu_version:
+        description: 'QEMU version to test'
+        required: false
+        default: '9.0.1'
+      artifact_run_id:
+        description: 'Run ID of the build workflow to download artifacts from (leave empty for current run)'
+        required: false
+        default: ''
+      skip_artifact_download:
+        description: 'Skip artifact download and build from source'
+        type: boolean
+        required: false
+        default: false
+
+env:
+  QEMU_VERSION: ${{ inputs.qemu_version || '9.0.1' }}
+
+jobs:
+  # 生成测试矩阵
+  test-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate test matrix
+        id: set-matrix
+        run: |
+          chmod +x .github/scripts/generate-test-matrix.sh
+          .github/scripts/generate-test-matrix.sh
+
+  # 运行测试
+  test:
+    needs: test-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Download build artifacts
+        if: ${{ github.event.inputs.skip_artifact_download != 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: qemu-${{ env.QEMU_VERSION }}-${{ matrix.distro }}-${{ matrix.distro_version }}-${{ matrix.arch }}-*
+          path: artifacts
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Prepare test environment
+        run: |
+          chmod +x .github/scripts/*.sh
+          chmod +x scripts/*.sh
+          chmod +x tests/*.sh
+          mkdir -p output artifacts
+
+      - name: List downloaded artifacts
+        run: |
+          echo "Looking for artifacts..."
+          find artifacts -name "*.rpm" -type f 2>/dev/null || echo "No artifacts found, will build from source"
+
+      - name: Run tests in Docker container
+        run: |
+          docker run --rm \
+            -v "$(pwd):/workspace" \
+            -w /workspace \
+            -e QEMU_VERSION="${{ env.QEMU_VERSION }}" \
+            -e DISTRO="${{ matrix.distro }}" \
+            -e DISTRO_VERSION="${{ matrix.distro_version }}" \
+            -e WORKSPACE="/workspace" \
+            ${{ matrix.docker_image }} \
+            /workspace/.github/scripts/run-docker-test.sh
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.distro }}-${{ matrix.distro_version }}-${{ matrix.arch }}
+          path: |
+            output/test-results*.json
+            output/test-*.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # 测试摘要
+  test-summary:
+    needs: [test-matrix, test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: test-results
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Generate test summary
+        run: |
+          echo "## QEMU Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**QEMU Version:** ${{ env.QEMU_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Matrix Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Distribution | Version | Architecture | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------------|---------|--------------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          # 根据整体测试结果显示状态
+          STATUS="${{ needs.test.result == 'success' && '✅ Pass' || '❌ Fail' }}"
+          
+          # 为每个矩阵组合生成行
+          for distro_ver in "22.03" "24.03"; do
+            for arch in "x86_64" "aarch64"; do
+              echo "| openEuler | ${distro_ver} | ${arch} | ${STATUS} |" >> $GITHUB_STEP_SUMMARY
+            done
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Result:** ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check test results
+        if: needs.test.result != 'success'
+        run: |
+          echo "::error::Some tests failed!"
+          exit 1
