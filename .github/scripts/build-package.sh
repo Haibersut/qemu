@@ -102,10 +102,10 @@ echo "=============================================="
 # 确定基础镜像
 case "${DISTRO}-${DISTRO_VERSION}" in
     openeuler-22.03)
-        BASE_IMAGE="openeuler/openeuler:22.03-lts"
+        BASE_IMAGE="openeuler/openeuler:22.03-lts-sp4"
         ;;
     openeuler-24.03)
-        BASE_IMAGE="openeuler/openeuler:24.03-lts"
+        BASE_IMAGE="openeuler/openeuler:24.03-lts-sp2"
         ;;
     *)
         echo "ERROR: Unknown distro: ${DISTRO}-${DISTRO_VERSION}"

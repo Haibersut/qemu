@@ -1,7 +1,7 @@
 # QEMU RPM 构建 Dockerfile
 # 支持多架构和多发行版构建
 
-ARG BASE_IMAGE=openeuler/openeuler:24.03-lts
+ARG BASE_IMAGE=openeuler/openeuler:24.03-lts-sp2
 
 FROM ${BASE_IMAGE}
 
