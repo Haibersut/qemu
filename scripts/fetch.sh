@@ -23,14 +23,11 @@ if [ -n "$QEMU_GIT_COMMIT" ]; then
     fi
 else
     INFO "Downloading from: ${QEMU_SRC_URL}"
-    local tarball="$(basename "${QEMU_SRC_URL}")"
+    tarball="$(basename "${QEMU_SRC_URL}")"
     if [ ! -f "${tarball}" ]; then
         RUN wget -q "${QEMU_SRC_URL}" || {
-            WARN "Primary download failed, trying mirror..."
-            RUN wget -q "https://mirrors.edge.kernel.org/pub/linux/kernel/people/agraf/qemu/${tarball}" || {
-                ERROR "Failed to download QEMU source"
-                exit 1
-            }
+            ERROR "Failed to download QEMU source"
+            exit 1
         }
     else
         INFO "Source tarball already exists, skipping download"
@@ -39,7 +36,7 @@ else
     # MD5 校验
     if [ -n "${QEMU_SRC_MD5}" ]; then
         INFO "Verifying MD5 checksum..."
-        local actual_md5=$(md5sum "${tarball}" | awk '{print $1}')
+        actual_md5=$(md5sum "${tarball}" | awk '{print $1}')
         if [ "${actual_md5}" != "${QEMU_SRC_MD5}" ]; then
             ERROR "MD5 checksum verification failed!"
             ERROR "Expected: ${QEMU_SRC_MD5}"

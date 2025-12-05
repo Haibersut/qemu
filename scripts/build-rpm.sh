@@ -32,6 +32,22 @@ if [ ! -f "${tarball}" ]; then
     }
 fi
 
+# MD5 校验
+if [ -n "${QEMU_SRC_MD5}" ]; then
+    INFO "Verifying MD5 checksum..."
+    actual_md5=$(md5sum "${tarball}" | awk '{print $1}')
+    if [ "${actual_md5}" != "${QEMU_SRC_MD5}" ]; then
+        ERROR "MD5 checksum verification failed!"
+        ERROR "Expected: ${QEMU_SRC_MD5}"
+        ERROR "Actual:   ${actual_md5}"
+        rm -f "${tarball}"
+        exit 1
+    fi
+    INFO "MD5 checksum verified successfully"
+else
+    WARN "No MD5 checksum provided, skipping verification"
+fi
+
 # 复制 spec 文件
 SPEC_FILE=$(get_spec_file)
 if [ ! -f "${SPEC_FILE}" ]; then

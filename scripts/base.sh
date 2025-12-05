@@ -42,9 +42,18 @@ else
     QEMU_SRC_URL="https://download.qemu.org/${QEMU_SRC_BASENAME}.tar.xz"
 fi
 
-# MD5 校验和 (用于验证下载的源码包完整性)
-# QEMU 9.0.1: 905f7f21d3507c057e2fb65b142e960e
-QEMU_SRC_MD5="${QEMU_SRC_MD5:-905f7f21d3507c057e2fb65b142e960e}"
+# MD5 校验
+if [ -z "${QEMU_SRC_MD5}" ]; then
+    case "${QEMU_VERSION}" in
+        9.0.1)
+            QEMU_SRC_MD5="905f7f21d3507c057e2fb65b142e960e"
+            ;;
+        *)
+            # 未知版本，跳过校验
+            QEMU_SRC_MD5=""
+            ;;
+    esac
+fi
 
 # 构建产物名称
 QEMU_ARTIFACT_F0=${QEMU_GIT_COMMIT:+-$QEMU_GIT_COMMIT}
