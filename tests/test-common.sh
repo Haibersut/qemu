@@ -179,7 +179,7 @@ assert_output_contains() {
     
     TESTS_TOTAL=$((TESTS_TOTAL + 1))
     
-    if echo "$output" | grep -q "$expected"; then
+    if echo "$output" | grep -q -- "$expected"; then
         TESTS_PASSED=$((TESTS_PASSED + 1))
         log_pass "$message"
         return 0
@@ -256,7 +256,7 @@ check_device_support() {
     local qemu_bin="$1"
     local device="$2"
     
-    "$qemu_bin" -device help 2>&1 | grep -q "$device"
+    "$qemu_bin" -device help 2>&1 | grep -q -- "$device"
 }
 
 # 检查 QEMU 是否支持某个机器类型
@@ -264,7 +264,7 @@ check_machine_support() {
     local qemu_bin="$1"
     local machine="$2"
     
-    "$qemu_bin" -machine help 2>&1 | grep -q "$machine"
+    "$qemu_bin" -machine help 2>&1 | grep -q -- "$machine"
 }
 
 # 检查 QEMU 是否支持某个 CPU 类型
@@ -272,7 +272,7 @@ check_cpu_support() {
     local qemu_bin="$1"
     local cpu="$2"
     
-    "$qemu_bin" -cpu help 2>&1 | grep -q "$cpu"
+    "$qemu_bin" -cpu help 2>&1 | grep -q -- "$cpu"
 }
 
 # ============================================================================
