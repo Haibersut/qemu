@@ -61,10 +61,23 @@ fi
 # 查找并安装 RPM 包
 # ============================================================================
 log_info "Looking for pre-built RPM packages..."
-RPM_FILE=$(find "${WORKSPACE}/artifacts" -name "qemu-*.rpm" -type f 2>/dev/null | head -1)
+
+# 优先查找从 Release 下载的 RPM
+RPM_FILE=""
+if [ -d "${WORKSPACE}/artifacts" ]; then
+    # 首先尝试精确匹配架构
+    ARCH=$(uname -m)
+    RPM_FILE=$(find "${WORKSPACE}/artifacts" -name "qemu-*.${ARCH}.rpm" -type f 2>/dev/null | head -1)
+    
+    # 如果没找到，尝试任意 RPM
+    if [ -z "$RPM_FILE" ]; then
+        RPM_FILE=$(find "${WORKSPACE}/artifacts" -name "qemu-*.rpm" -type f 2>/dev/null | head -1)
+    fi
+fi
 
 if [ -n "$RPM_FILE" ]; then
     log_info "Found RPM package: $RPM_FILE"
+    log_info "RPM file size: $(ls -lh "$RPM_FILE" | awk '{print $5}')"
     log_info "Installing QEMU from RPM..."
     
     if command -v dnf &> /dev/null; then
@@ -75,7 +88,7 @@ if [ -n "$RPM_FILE" ]; then
     
     log_pass "QEMU installed from RPM"
 else
-    log_skip "No pre-built RPM found, building from source..."
+    log_skip "No pre-built RPM found in ${WORKSPACE}/artifacts, building from source..."
     
     # 安装构建依赖
     if [ -x "${WORKSPACE}/scripts/install-deps.sh" ]; then
@@ -100,6 +113,21 @@ else
     [ -x "${WORKSPACE}/scripts/install.sh" ] && "${WORKSPACE}/scripts/install.sh"
     
     log_pass "QEMU built and installed from source"
+    
+    log_info "Copying installed files to ${QEMU_PREFIX}..."
+    ARCH=$(uname -m)
+    INSTALL_DESTDIR=$(find "${WORKSPACE}/install" -maxdepth 1 -type d -name "qemu-linux-${ARCH}-*" 2>/dev/null | head -1)
+    
+    if [ -n "${INSTALL_DESTDIR}" ] && [ -d "${INSTALL_DESTDIR}${QEMU_PREFIX}" ]; then
+        log_info "Found installed files at: ${INSTALL_DESTDIR}${QEMU_PREFIX}"
+        mkdir -p "$(dirname ${QEMU_PREFIX})"
+        cp -a "${INSTALL_DESTDIR}${QEMU_PREFIX}" "$(dirname ${QEMU_PREFIX})/"
+        log_pass "Files copied to ${QEMU_PREFIX}"
+    else
+        log_fail "Could not find installed files to copy"
+        log_info "Contents of ${WORKSPACE}/install:"
+        ls -la "${WORKSPACE}/install" 2>/dev/null || true
+    fi
 fi
 
 # ============================================================================
