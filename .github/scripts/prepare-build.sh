@@ -15,7 +15,7 @@ echo "=============================================="
 # 确保输出目录存在
 mkdir -p output
 
-# 确保 patches 目录存在（即使为空）
+# 确保 patches 目录存在
 mkdir -p patches
 
 # 验证必要文件存在
@@ -29,8 +29,9 @@ if [ ! -f "distros/${DISTRO}-${DISTRO_VERSION}.sh" ]; then
     exit 1
 fi
 
-if [ ! -f "specs/qemu-${DISTRO}.spec" ]; then
-    echo "ERROR: specs/qemu-${DISTRO}.spec not found"
+# 检查 spec 文件
+if [ ! -f "specs/qemu-${DISTRO}-${DISTRO_VERSION}.spec" ]; then
+    echo "ERROR: specs/qemu-${DISTRO}-${DISTRO_VERSION}.spec not found"
     exit 1
 fi
 
