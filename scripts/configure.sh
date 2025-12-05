@@ -33,17 +33,22 @@ if type get_configure_options &>/dev/null; then
     DISTRO_OPTS=$(get_configure_options)
 fi
 
+# 自定义安装前缀
+QEMU_PREFIX="/usr/local/qemu-${QEMU_VERSION}"
+
 # 配置 QEMU
 INFO "Running configure..."
+INFO "Install prefix: ${QEMU_PREFIX}"
 RUN "${SRC_DIR}/${QEMU_SRC_BASENAME}/configure" \
-    --prefix="/usr" \
-    --sysconfdir="/etc" \
-    --localstatedir="/var" \
-    --libdir="/usr/lib64" \
-    --datadir="/usr/share" \
-    --docdir="/usr/share/doc/qemu-${QEMU_VERSION}" \
+    --prefix="${QEMU_PREFIX}" \
+    --sysconfdir="${QEMU_PREFIX}/etc" \
+    --localstatedir="${QEMU_PREFIX}/var" \
+    --libdir="${QEMU_PREFIX}/lib64" \
+    --datadir="${QEMU_PREFIX}/share" \
+    --docdir="${QEMU_PREFIX}/share/doc" \
     --target-list="${TARGETS}" \
     --enable-kvm \
+    --enable-slirp \
     --enable-pie \
     --enable-linux-aio \
     --enable-cap-ng \
@@ -57,8 +62,6 @@ RUN "${SRC_DIR}/${QEMU_SRC_BASENAME}/configure" \
     --enable-guest-agent \
     --enable-rbd \
     --enable-spice \
-    --disable-debug-info \
-    --disable-werror \
     ${DISTRO_OPTS}
 
 INFO "Configure completed successfully"

@@ -72,6 +72,7 @@ QEMU_RECOMMENDED_DEPS=(
     libselinux-devel
     pcre-devel
     pcre2-devel
+    libslirp-devel
 )
 
 # QEMU 可选依赖
@@ -93,7 +94,6 @@ QEMU_OPTIONAL_DEPS=(
 
 # 可能不存在的依赖
 QEMU_OPTIONAL_TRY_DEPS=(
-    libslirp-devel
     python3-sphinx
     alsa-lib-devel
     pulseaudio-libs-devel
@@ -104,23 +104,23 @@ install_dependencies() {
     local pkg_mgr="${PKG_MANAGER}"
     
     INFO "Installing base build dependencies..."
-    ${pkg_mgr} install -y "${BASE_BUILD_DEPS[@]}"
+    "${pkg_mgr}" install -y "${BASE_BUILD_DEPS[@]}"
     
     INFO "Installing meson (after python3-ninja)..."
-    ${pkg_mgr} install -y "${MESON_DEPS[@]}"
+    "${pkg_mgr}" install -y "${MESON_DEPS[@]}"
     
     INFO "Installing QEMU core dependencies..."
-    ${pkg_mgr} install -y "${QEMU_CORE_DEPS[@]}"
+    "${pkg_mgr}" install -y "${QEMU_CORE_DEPS[@]}"
     
     INFO "Installing QEMU recommended dependencies..."
-    ${pkg_mgr} install -y "${QEMU_RECOMMENDED_DEPS[@]}" || true
+    "${pkg_mgr}" install -y "${QEMU_RECOMMENDED_DEPS[@]}" || true
     
     INFO "Installing QEMU optional dependencies..."
-    ${pkg_mgr} install -y "${QEMU_OPTIONAL_DEPS[@]}" || true
+    "${pkg_mgr}" install -y "${QEMU_OPTIONAL_DEPS[@]}" || true
     
     INFO "Trying to install optional dependencies..."
     for dep in "${QEMU_OPTIONAL_TRY_DEPS[@]}"; do
-        ${pkg_mgr} install -y "$dep" || WARN "Could not install $dep, skipping..."
+        "${pkg_mgr}" install -y "$dep" || WARN "Could not install $dep, skipping..."
     done
 }
 

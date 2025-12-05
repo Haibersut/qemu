@@ -52,10 +52,10 @@ install_dependencies() {
     # 根据包管理器类型安装
     case "$pkg_mgr" in
         dnf|yum)
-            ${pkg_mgr} install -y "${BASE_BUILD_DEPS[@]}"
-            ${pkg_mgr} install -y "${QEMU_CORE_DEPS[@]}"
-            ${pkg_mgr} install -y "${QEMU_RECOMMENDED_DEPS[@]}" || true
-            ${pkg_mgr} install -y "${QEMU_OPTIONAL_DEPS[@]}" || true
+            "${pkg_mgr}" install -y "${BASE_BUILD_DEPS[@]}"
+            "${pkg_mgr}" install -y "${QEMU_CORE_DEPS[@]}"
+            "${pkg_mgr}" install -y "${QEMU_RECOMMENDED_DEPS[@]}" || true
+            "${pkg_mgr}" install -y "${QEMU_OPTIONAL_DEPS[@]}" || true
             ;;
         apt)
             apt-get update
@@ -74,7 +74,7 @@ install_dependencies() {
     esac
     
     for dep in "${QEMU_OPTIONAL_TRY_DEPS[@]}"; do
-        ${pkg_mgr} install -y "$dep" 2>/dev/null || true
+        "${pkg_mgr}" install -y "$dep" 2>/dev/null || true
     done
 }
 

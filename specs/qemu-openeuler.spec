@@ -1,6 +1,9 @@
 %global debug_package %{nil}
 %global _enable_debug_packages 0
 
+# 自定义安装前缀
+%global qemu_prefix /usr/local/qemu-%{version}
+
 # 禁用固件文件的 strip（它们不是 ELF 格式）
 %global __os_install_post \
     /usr/lib/rpm/brp-compress \
@@ -61,6 +64,7 @@ BuildRequires:  json-c-devel
 BuildRequires:  libselinux-devel
 BuildRequires:  pcre-devel
 BuildRequires:  pcre2-devel
+BuildRequires:  libslirp-devel
 BuildRequires:  spice-server-devel
 BuildRequires:  spice-protocol
 BuildRequires:  librbd-devel
@@ -89,25 +93,17 @@ TARGETS="aarch64-softmmu,x86_64-softmmu,aarch64-linux-user,x86_64-linux-user"
 mkdir -p build
 cd build
 
-# 检查 libslirp 是否可用
-SLIRP_OPT=""
-if pkg-config --exists slirp 2>/dev/null; then
-    SLIRP_OPT="--enable-slirp"
-else
-    SLIRP_OPT="--disable-slirp"
-fi
-
 # 配置 QEMU
 ../configure \
-    --prefix=%{_prefix} \
-    --sysconfdir=%{_sysconfdir} \
-    --localstatedir=%{_localstatedir} \
-    --libdir=%{_libdir} \
-    --datadir=%{_datadir} \
-    --docdir=%{_docdir}/qemu-%{version} \
+    --prefix=%{qemu_prefix} \
+    --sysconfdir=%{qemu_prefix}/etc \
+    --localstatedir=%{qemu_prefix}/var \
+    --libdir=%{qemu_prefix}/lib64 \
+    --datadir=%{qemu_prefix}/share \
+    --docdir=%{qemu_prefix}/share/doc \
     --target-list=${TARGETS} \
     --enable-kvm \
-    ${SLIRP_OPT} \
+    --enable-slirp \
     --enable-pie \
     --enable-linux-aio \
     --enable-cap-ng \
@@ -122,8 +118,6 @@ fi
     --enable-guest-agent \
     --enable-rbd \
     --enable-spice \
-    --disable-debug-info \
-    --disable-werror
 
 %make_build
 
@@ -133,23 +127,15 @@ cd build
 
 # 创建便捷符号链接
 %ifarch x86_64
-ln -sf qemu-system-x86_64 %{buildroot}%{_bindir}/qemu
+ln -sf qemu-system-x86_64 %{buildroot}%{qemu_prefix}/bin/qemu
 %endif
 %ifarch aarch64
-ln -sf qemu-system-aarch64 %{buildroot}%{_bindir}/qemu
+ln -sf qemu-system-aarch64 %{buildroot}%{qemu_prefix}/bin/qemu
 %endif
 
-# 创建配置目录
-mkdir -p %{buildroot}%{_sysconfdir}/qemu
-cat > %{buildroot}%{_sysconfdir}/qemu/bridge.conf << 'EOF'
-# Bridge configuration for QEMU
-# Add allowed bridges here, e.g.:
-# allow br0
-EOF
-
-# 安装 udev 规则
-mkdir -p %{buildroot}%{_prefix}/lib/udev/rules.d
-cat > %{buildroot}%{_prefix}/lib/udev/rules.d/99-qemu-kvm.rules << 'EOF'
+# 安装 udev 规则到系统目录
+mkdir -p %{buildroot}/usr/lib/udev/rules.d
+cat > %{buildroot}/usr/lib/udev/rules.d/99-qemu-kvm.rules << 'EOF'
 # KVM device permissions
 KERNEL=="kvm", GROUP="kvm", MODE="0660"
 EOF
@@ -157,29 +143,16 @@ EOF
 %files
 %license COPYING COPYING.LIB
 %doc README.rst
-%{_bindir}/qemu*
-%{_bindir}/elf2dmp
-%{_libexecdir}/qemu-bridge-helper
-%{_libexecdir}/virtfs-proxy-helper
-%{_datadir}/qemu/
-%{_datadir}/applications/qemu.desktop
-%{_datadir}/icons/hicolor/*/apps/qemu.*
-%{_datadir}/locale/*/LC_MESSAGES/qemu.mo
-%{_includedir}/qemu-plugin.h
-%config(noreplace) %{_sysconfdir}/qemu/
-%{_prefix}/lib/udev/rules.d/99-qemu-kvm.rules
-%{_mandir}/man1/*
-%{_mandir}/man7/*
-%{_mandir}/man8/*
-%{_docdir}/qemu-%{version}/
+%{qemu_prefix}/
+/usr/lib/udev/rules.d/99-qemu-kvm.rules
 
 %post
 getent group kvm >/dev/null || groupadd -r kvm || :
 
 # 设置 bridge helper 权限
-if [ -f %{_libexecdir}/qemu-bridge-helper ]; then
-    chgrp kvm %{_libexecdir}/qemu-bridge-helper 2>/dev/null || :
-    chmod 4750 %{_libexecdir}/qemu-bridge-helper 2>/dev/null || :
+if [ -f %{qemu_prefix}/libexec/qemu-bridge-helper ]; then
+    chgrp kvm %{qemu_prefix}/libexec/qemu-bridge-helper 2>/dev/null || :
+    chmod 4750 %{qemu_prefix}/libexec/qemu-bridge-helper 2>/dev/null || :
 fi
 
 # 重新加载 udev 规则
@@ -187,6 +160,10 @@ udevadm control --reload-rules 2>/dev/null || :
 udevadm trigger 2>/dev/null || :
 
 %changelog
-* %(date "+%a %b %d %Y") QEMU Builder <builder@haibersut> - %{version}-%{release}
-- Build for openEuler
+* Fri Dec 05 2024 QEMU Builder <builder@haibersut.com> - 9.0.1-1
+- Initial package for openEuler
 - Multi-architecture support (x86_64, aarch64)
+- Enable KVM virtualization
+- Enable SPICE remote display
+- Enable Ceph RBD storage backend
+- Enable linux-user emulation

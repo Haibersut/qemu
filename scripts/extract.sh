@@ -16,7 +16,7 @@ INFO "Extracting QEMU source..."
 
 WORKDIR "${SRC_DIR}"
 
-tarball="$(basename ${QEMU_SRC_URL})"
+tarball="$(basename "${QEMU_SRC_URL}")"
 
 if [ ! -d "${QEMU_SRC_BASENAME}" ]; then
     INFO "Extracting ${tarball}..."

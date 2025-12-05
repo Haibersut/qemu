@@ -23,7 +23,7 @@ if [ -n "$QEMU_GIT_COMMIT" ]; then
     fi
 else
     INFO "Downloading from: ${QEMU_SRC_URL}"
-    local tarball="$(basename ${QEMU_SRC_URL})"
+    local tarball="$(basename "${QEMU_SRC_URL}")"
     if [ ! -f "${tarball}" ]; then
         RUN wget -q "${QEMU_SRC_URL}" || {
             WARN "Primary download failed, trying mirror..."
@@ -34,6 +34,21 @@ else
         }
     else
         INFO "Source tarball already exists, skipping download"
+    fi
+
+    # MD5 校验
+    if [ -n "${QEMU_SRC_MD5}" ]; then
+        INFO "Verifying MD5 checksum..."
+        local actual_md5=$(md5sum "${tarball}" | awk '{print $1}')
+        if [ "${actual_md5}" != "${QEMU_SRC_MD5}" ]; then
+            ERROR "MD5 checksum verification failed!"
+            ERROR "Expected: ${QEMU_SRC_MD5}"
+            ERROR "Actual:   ${actual_md5}"
+            exit 1
+        fi
+        INFO "MD5 checksum verified successfully"
+    else
+        WARN "No MD5 checksum provided, skipping verification"
     fi
 fi
 

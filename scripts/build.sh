@@ -13,6 +13,6 @@ WORKDIR "${BUILD_DIR}/${QEMU_SRC_BASENAME}"
 NPROC=$(get_nproc)
 INFO "Using ${NPROC} parallel jobs"
 
-RUN make -j${NPROC}
+RUN make -j"${NPROC}"
 
 INFO "Build completed successfully"
