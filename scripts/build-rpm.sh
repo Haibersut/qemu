@@ -54,15 +54,36 @@ fi
 INFO "Running rpmbuild..."
 WORKDIR "${RPMBUILD_DIR}/SPECS"
 
-RUN rpmbuild -ba qemu.spec \
+RUN rpmbuild -bb qemu.spec \
     --define "_topdir ${RPMBUILD_DIR}" \
     --define "debug_package %{nil}" \
     --define "_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.${DISTRO}${DISTRO_VERSION}.rpm"
 
 # 复制输出
 mkdir -p "${OUTPUT_DIR}"
-cp -v "${RPMBUILD_DIR}/RPMS"/*/*.rpm "${OUTPUT_DIR}/" 2>/dev/null || true
-cp -v "${RPMBUILD_DIR}/SRPMS"/*.rpm "${OUTPUT_DIR}/" 2>/dev/null || true
+
+INFO "Contents of RPMS directory:"
+ls -la "${RPMBUILD_DIR}/RPMS/" 2>/dev/null || true
+find "${RPMBUILD_DIR}/RPMS" -name "*.rpm" -type f 2>/dev/null || true
+
+INFO "Copying binary RPM packages to output directory..."
+rpm_count=$(find "${RPMBUILD_DIR}/RPMS" -name "*.rpm" -type f 2>/dev/null | wc -l)
+if [ "$rpm_count" -eq 0 ]; then
+    ERROR "No RPM packages found in ${RPMBUILD_DIR}/RPMS"
+    exit 1
+fi
+
+find "${RPMBUILD_DIR}/RPMS" -name "*.rpm" -type f -exec cp -v {} "${OUTPUT_DIR}/" \;
+INFO "Copied ${rpm_count} RPM package(s) to output directory"
+
+# 验证复制的文件
+INFO "Verifying copied RPM packages..."
+for rpm_file in "${OUTPUT_DIR}"/*.rpm; do
+    if [ -f "$rpm_file" ]; then
+        INFO "Package: $(basename "$rpm_file") - Size: $(du -h "$rpm_file" | cut -f1)"
+        rpm -qpl "$rpm_file" 2>/dev/null | head -20 || true
+    fi
+done
 
 # 重命名包含发行版信息
 WORKDIR "${OUTPUT_DIR}"

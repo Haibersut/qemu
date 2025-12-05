@@ -39,7 +39,6 @@ QEMU_CORE_DEPS=(
 # QEMU 推荐依赖
 QEMU_RECOMMENDED_DEPS=(
     dtc
-    libfdt-devel
     libaio-devel
     libcap-ng-devel
     libattr-devel
@@ -60,7 +59,7 @@ QEMU_RECOMMENDED_DEPS=(
     systemd-devel
     bzip2-devel
     xz-devel
-    libzstd-devel
+    zstd-devel
     json-c-devel
     libselinux-devel
     pcre-devel
@@ -128,5 +127,5 @@ get_configure_options() {
 
 # spec 文件路径
 get_spec_file() {
-    echo "${WORK_ROOT}/specs/qemu-openeuler.spec"
+    echo "${WORK_ROOT}/specs/qemu-openeuler-22.03.spec"
 }

@@ -160,8 +160,8 @@ udevadm control --reload-rules 2>/dev/null || :
 udevadm trigger 2>/dev/null || :
 
 %changelog
-* Fri Dec 05 2024 QEMU Builder <builder@haibersut.com> - 9.0.1-1
-- Initial package for openEuler
+* Fri Dec 05 2025 QEMU Builder <builder@haibersut.com> - 9.0.1-1
+- Initial package for openEuler 24.03
 - Multi-architecture support (x86_64, aarch64)
 - Enable KVM virtualization
 - Enable SPICE remote display

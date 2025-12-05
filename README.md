@@ -43,7 +43,8 @@ qemu/
 │   ├── build-all.sh           # 完整构建（二进制）
 │   └── build-rpm-all.sh       # 完整构建（RPM）
 ├── specs/
-│   └── qemu-openeuler.spec    # openEuler RPM spec 文件
+│   ├── qemu-openeuler-22.03.spec  # openEuler 22.03 RPM spec 文件
+│   └── qemu-openeuler-24.03.spec  # openEuler 24.03 RPM spec 文件
 └── README.md
 ```
 

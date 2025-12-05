@@ -144,5 +144,5 @@ get_configure_options() {
 
 # spec 文件路径
 get_spec_file() {
-    echo "${WORK_ROOT}/specs/qemu-openeuler.spec"
+    echo "${WORK_ROOT}/specs/qemu-openeuler-24.03.spec"
 }
